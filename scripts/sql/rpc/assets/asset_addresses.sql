@@ -23,8 +23,8 @@ BEGIN
 
   RETURN QUERY
     SELECT
-      x.address,
-      x.stake_address,
+      x.address::varchar,
+      x.stake_address::varchar,
       SUM(x.quantity)::text
     FROM
       (

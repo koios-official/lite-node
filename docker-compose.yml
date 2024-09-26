@@ -3,7 +3,7 @@ version: '3'
 name: "${PROJ_NAME}"
 services:
   cardano-node:
-    image: cardanocommunity/cardano-node:8.7.3
+    image: cardanocommunity/cardano-node:9.1.2
     init: true
     hostname: cardano-node
     environment:
@@ -13,7 +13,7 @@ services:
     volumes:
       - node-db:/opt/cardano/cnode/db
       - node-ipc:/opt/cardano/cnode/sockets
-      - node-cfg:/opt/cardano/cnode/priv/files
+      - node-cfg:/opt/cardano/cnode/files
       - ./scripts/:/scripts/
     restart: on-failure
     healthcheck:
@@ -28,7 +28,7 @@ services:
         max-file: "10"
 
   cardano-db-sync:
-    image: ghcr.io/intersectmbo/cardano-db-sync:13.2.0.1
+    image: ghcr.io/intersectmbo/cardano-db-sync:13.5.0.2
     hostname: cardano-db-sync
     environment:
       DISABLE_LEDGER: ${DISABLE_LEDGER}
@@ -40,6 +40,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       RESTORE_SNAPSHOT: ${RESTORE_SNAPSHOT:-}
       RESTORE_RECREATE_DB: N
+      DB_SYNC_CONFIG: ${DB_SYNC_CONFIG:-}
       EXTRA_DB_SYNC_ARGS: ${EXTRA_DB_SYNC_ARGS:-}
     healthcheck:
       test: ["CMD-SHELL", "/scripts/lib/dbsync_healthcheck.sh"]
@@ -54,6 +55,8 @@ services:
     volumes:
       - db-sync-data:/var/lib/cexplorer
       - node-ipc:/node-ipc
+      - node-cfg:/opt/cardano/cnode/files
+      - ./configs/dbsync:/dbsync-cfg
       - ./scripts/:/scripts/
     restart: on-failure
     logging:
@@ -63,7 +66,7 @@ services:
         max-file: "10"
 
   postgress:
-    image: postgres:16.2-bullseye
+    image: postgres:16.4-bookworm
     hostname: postgress
     volumes:
       - postgresdb:/var/lib/postgresql/data
@@ -79,7 +82,7 @@ services:
       test:  ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 60s
       timeout: 5s
-    command: postgres -c max_connections=200 -c wal_level=minimal -c max_wal_senders=0 -c synchronous_commit=off
+    command: postgres -c max_connections=200 -c maintenance_work_mem=2GB -c max_parallel_maintenance_workers=4 -c shared_buffers=6GB -c wal_level=minimal -c max_wal_senders=0 -c synchronous_commit=off
     restart: on-failure
     logging:
       driver: "json-file"
@@ -88,7 +91,7 @@ services:
         max-file: "10"
 
   postgrest:
-    image: postgrest/postgrest:v12.0.2
+    image: postgrest/postgrest:v12.2.3
     hostname: postgrest
     depends_on:
       - postgress
@@ -146,7 +149,7 @@ services:
 
 
   haproxy:
-    image: haproxy:2.9.6-bookworm
+    image: haproxy:3.0.5-bookworm
     hostname: haproxy
     depends_on:
       - postgrest

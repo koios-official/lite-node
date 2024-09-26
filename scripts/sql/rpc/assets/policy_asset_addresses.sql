@@ -10,8 +10,8 @@ AS $$
 BEGIN
   SELECT
     ENCODE(ma.name, 'hex') AS asset_name,
-    txo.address,
-    sa.view as stake_address,
+    txo.address::varchar,
+    sa.view::varchar as stake_address,
     SUM(mto.quantity)::text
   FROM multi_asset AS ma
   LEFT JOIN ma_tx_out AS mto ON mto.ident = ma.id

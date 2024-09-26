@@ -34,7 +34,7 @@ BEGIN
       )
 
       SELECT
-        sa.view AS stake_address,
+        sa.view::varchar AS stake_address,
         JSONB_AGG(txo_addr.address) AS addresses
       FROM
         txo_addr
@@ -60,7 +60,7 @@ BEGIN
       )
 
       SELECT
-        sa.view AS stake_address,
+        sa.view::varchar AS stake_address,
         JSONB_AGG(txo_addr.address) AS addresses
       FROM
         txo_addr
