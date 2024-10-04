@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS {{SCHEMA}}.asset_info_cache (
 
 CREATE INDEX IF NOT EXISTS idx_last_mint_tx_id ON {{SCHEMA}}.asset_info_cache (last_mint_tx_id);
 CREATE INDEX IF NOT EXISTS idx_last_mint_meta_tx_id ON {{SCHEMA}}.asset_info_cache (last_mint_meta_tx_id);
-CREATE INDEX IF NOT EXISTS idx_creation_time ON grest.asset_info_cache (creation_time DESC);
+CREATE INDEX IF NOT EXISTS idx_creation_time ON {{SCHEMA}}.asset_info_cache (creation_time DESC);
 
 CREATE OR REPLACE FUNCTION {{SCHEMA}}.asset_info_cache_update()
 RETURNS void
@@ -102,7 +102,7 @@ BEGIN
     mint_cnt = excluded.mint_cnt,
     burn_cnt = excluded.burn_cnt,
     last_mint_tx_id = excluded.last_mint_tx_id,
-    last_mint_meta_tx_id = COALESCE(excluded.last_mint_meta_tx_id,grest.asset_info_cache.last_mint_meta_tx_id);
+    last_mint_meta_tx_id = COALESCE(excluded.last_mint_meta_tx_id,{{SCHEMA}}.asset_info_cache.last_mint_meta_tx_id);
 
   IF _asset_info_cache_last_tx_id IS NOT NULL AND _asset_id_list IS NOT NULL THEN
     RAISE NOTICE '% assets added or updated', ARRAY_LENGTH(_asset_id_list, 1);

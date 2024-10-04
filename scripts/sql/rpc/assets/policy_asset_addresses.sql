@@ -7,7 +7,6 @@ RETURNS TABLE (
 )
 LANGUAGE sql STABLE
 AS $$
-BEGIN
   SELECT
     ENCODE(ma.name, 'hex') AS asset_name,
     txo.address::varchar,
@@ -23,7 +22,6 @@ BEGIN
     ma.name,
     txo.address,
     sa.view;
-END;
 $$;
 
 COMMENT ON FUNCTION {{SCHEMA}}.policy_asset_addresses IS 'Returns a list of addresses with quantity for each asset ON a given policy'; -- noqa: LT01
