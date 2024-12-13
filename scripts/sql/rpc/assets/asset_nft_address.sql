@@ -27,8 +27,8 @@ BEGIN
   IF EXISTS (SELECT * FROM ma_tx_mint WHERE ident = _asset_id and quantity < 0 LIMIT 1) THEN
     RETURN QUERY
       SELECT
-        txo.address,
-        sa.view AS stake_address
+        txo.address::varchar,
+        sa.view::varchar AS stake_address
       FROM tx_out AS txo
       LEFT JOIN stake_address AS sa ON txo.stake_address_id = sa.id
       WHERE id = (
@@ -39,8 +39,8 @@ BEGIN
   ELSE
     RETURN QUERY
       SELECT
-        txo.address,
-        sa.view AS stake_address
+        txo.address::varchar,
+        sa.view::varchar AS stake_address
       FROM tx_out AS txo
       INNER JOIN ma_tx_out AS mto ON mto.tx_out_id = txo.id
       LEFT JOIN stake_address AS sa ON txo.stake_address_id = sa.id

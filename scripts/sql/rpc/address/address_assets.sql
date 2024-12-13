@@ -31,7 +31,7 @@ BEGIN
     )
 
     SELECT
-      aa.address,
+      aa.address::varchar,
       ENCODE(aa.policy, 'hex') AS policy_id,
       ENCODE(aa.name, 'hex') AS asset_name,
       aa.fingerprint AS fingerprint,

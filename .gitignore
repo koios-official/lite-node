@@ -2,3 +2,5 @@
 .*status
 .dependency_installation_status
 *.swp
+scripts/sql/rpc/*.txt
+configs/dbsync/*.json

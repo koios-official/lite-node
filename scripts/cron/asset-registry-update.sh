@@ -20,13 +20,13 @@ else
   exit 1
 fi
 
-NUMASSETS=`psql -t -h $POSTGRES_HOST -c "select count(*) from ${RPC_SCHEMA}.asset_registry_cache;"`
+NUMASSETS=`psql -t -c "select count(*) from ${RPC_SCHEMA}.asset_registry_cache;"`
 
 echo "NUM of assets in asset registry cache table: $NUMASSETS"
 
 if [[ "$NUMASSETS" -lt 1 ]]; then
   echo "Resetting last asset registry commit to null explicitly"
-  psql -h $POSTGRES_HOST -c "update ${RPC_SCHEMA}.control_table set last_value = '-1' where key='asset_registry_commit'"
+  psql -c "update ${RPC_SCHEMA}.control_table set last_value = '-1' where key='asset_registry_commit'"
 fi
 
 #sed -e "s@CNODE_VNAME=.*@CNODE_VNAME=${CNODE_VNAME}@" \
@@ -59,7 +59,7 @@ fi
 pushd "${TR_DIR}/${TR_NAME}" >/dev/null || exit 1
 git pull >/dev/null || exit 1
 
-last_commit="$(psql -h $POSTGRES_HOST -c "select last_value from ${RPC_SCHEMA}.control_table where key='asset_registry_commit'" -t | xargs)"
+last_commit="$(psql -c "select last_value from ${RPC_SCHEMA}.control_table where key='asset_registry_commit'" -t | xargs)"
 echo "LAST COMIT IN CONTROL TABLE IS: $last_commit"
 
 [[ -z "${last_commit}" ]] && last_commit="$(git rev-list HEAD | tail -n 1)"
@@ -99,8 +99,8 @@ UPDATE ${RPC_SCHEMA}.asset_info_cache SET decimals=x.decimals FROM
   WHERE asset_id = x.id;
 EOF
 
-psql -h ${POSTGRES_HOST} -qb -f .assetregistry.sql >/dev/null && rm -f .assetregistry.sql
-psql -h ${POSTGRES_HOST} -qb -c "INSERT INTO ${RPC_SCHEMA}.control_table (key, last_value) VALUES ('asset_registry_commit','${latest_commit}') ON CONFLICT(key) DO UPDATE SET last_value='${latest_commit}'"
+psql -qb -f .assetregistry.sql >/dev/null && rm -f .assetregistry.sql
+psql -qb -c "INSERT INTO ${RPC_SCHEMA}.control_table (key, last_value) VALUES ('asset_registry_commit','${latest_commit}') ON CONFLICT(key) DO UPDATE SET last_value='${latest_commit}'"
 echo "$(date +%F_%H:%M:%S) - END - Asset Registry Update, ${asset_cnt} assets added/updated for commits ${last_commit} to ${latest_commit}."
 
 echo "DONE with asset registry stuff at `date`"

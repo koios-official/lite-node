@@ -10,6 +10,8 @@ script_dir=$(dirname "$(realpath "${BASH_SOURCE[@]}")")
 KLITE_HOME=$(dirname "$script_dir")
 path_line="export PATH=\"$script_dir:\$PATH\""
 
+export PODMAN_COMPOSE_WARNING_LOGS=false
+
 # Append path_line to shell configuration files
 append_path_to_shell_configs() {
   for file in "$HOME/.bashrc" "$HOME/.zshrc"; do
@@ -29,42 +31,17 @@ install_dependencies() {
       source /etc/os-release
       case "${ID}" in
         ubuntu|debian)
-          if ! sudo apt update && sudo apt install -y gpg curl gawk; then return 1; fi
+          if ! sudo apt-get update && sudo apt-get install -y gpg curl gawk; then return 1; fi
           if ! sudo mkdir -p /etc/apt/keyrings; then return 1; fi
           if [[ ! -f /etc/apt/keyrings/charm.gpg ]] && ! curl -fsSL https://repo.charm.sh/apt/gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/charm.gpg; then return 1; fi
           if ! echo "deb [signed-by=/etc/apt/keyrings/charm.gpg] https://repo.charm.sh/apt/ * *" | sudo tee /etc/apt/sources.list.d/charm.list; then return 1; fi
-          if ! sudo apt-get update || ! sudo apt install -y gum; then return 1; fi
-          ;;
-        fedora|rhel)
-          if ! sudo dnf install curl awk;  then return 1; fi
-          arch=$(uname -m)
-          if [ "$arch" = "x86_64" ]; then
-            if ! curl -L https://github.com/charmbracelet/gum/releases/download/v0.13.0/gum-0.13.0-1.x86_64.rpm -o gum.rpm || ! sudo dnf install -y ./gum.rpm; then return 1; fi
-          elif [ "$arch" = "aarch64" ]; then
-            if ! curl -L https://github.com/charmbracelet/gum/releases/download/v0.13.0/gum-0.13.0-1.aarch64.rpm -o gum.rpm || ! sudo dnf install -y ./gum.rpm; then return 1; fi
-            return 1
-          else
-            echo "Unsupported architecture."
-            return 1
-          fi
-          ;;
-        arch|manjaro)
-          if ! sudo pacman -Syu curl awk gum; then return 1; fi
-          ;;
-        alpine)
-          if ! sudo apk add curl awk gum; then return 1; fi
+          if ! sudo apt-get update || ! sudo apt-get install -y gum; then return 1; fi
           ;;
         *)
           echo "Unsupported Linux distribution for automatic installation."
           return 1
           ;;
       esac
-      ;;
-    Darwin*)
-      if ! brew install curl awk gum; then return 1; fi
-      ;;
-    MINGW*|MSYS*|CYGWIN*)
-      if ! winget install curl awk gum; then return 1; fi
       ;;
     *)
       echo "Unsupported operating system."
@@ -78,70 +55,67 @@ install_dependencies() {
 
 
 
-# Check Docker function
-check_docker() {
-  # Check if docker command is available and outputs a version
-  docker_version=$(docker --version 2>/dev/null | grep "Docker version")
-  if [ -z "${docker_version}" ]; then
-    echo -e "\nDocker not installed.\n"
-    if gum confirm --unselected.foreground 231 --unselected.background 39 --selected.bold --selected.background 121 --selected.foreground 231 "Would you like to install Docker now?"; then
-      docker_install
+# Check Podman function
+check_podman() {
+  # Check if podman command is available and outputs a version
+  podman_version=$(podman --version 2>/dev/null | grep "podman version")
+  if [ -z "${podman_version}" ]; then
+    echo -e "\nPodman not installed.\n"
+    if gum confirm --unselected.foreground 231 --unselected.background 39 --selected.bold --selected.background 121 --selected.foreground 231 "Would you like to install Podman now?"; then
+      podman_install
     else
       return 1
     fi
-  # Check if Docker is running by executing a test container
+  # Check if Podman is running by executing a test container
   else
-    # Check if Docker is running
-    if ! docker run --rm hello-world > /dev/null 2>&1; then
-      echo -e "\nDocker is not running.\n"
-      if gum confirm --unselected.foreground 231 --unselected.background 39 --selected.bold --selected.background 121 --selected.foreground 231 "Would you like to try starting Docker now?"; then
-        echo "Attempting to start Docker..."
-        # Starting Docker based on OS
+    # Check if Podman is running
+    if ! podman run --rm hello-world > /dev/null 2>&1; then
+      echo -e "\nPodman is not running.\n"
+      if gum confirm --unselected.foreground 231 --unselected.background 39 --selected.bold --selected.background 121 --selected.foreground 231 "Would you like to try starting Podman now?"; then
+        echo "Attempting to start Podman..."
+        # Starting Podman based on OS
         os_name="$(uname -s)"
         case "${os_name}" in
           Linux*)
-            gum spin --spinner dot --title "Starting Docker..." -- echo && sudo systemctl start docker
-            ;;
-          Darwin*)
-            gum spin --spinner dot --title "Starting Docker..." -- Open -a Docker
+            gum spin --spinner dot --title "Starting Podman..." -- echo && sudo systemctl start podman
             ;;
           *)
-            echo "Cannot start Docker automatically on this OS."                  
+            echo "Cannot start Podman automatically on this OS."                  
             return 1
             ;;
         esac
-        # Recheck if Docker starts successfully
+        # Recheck if Podman starts successfully
         sleep 30  # Wait a bit before rechecking
-        if ! docker info > /dev/null 2>&1; then
-          echo -e "\nFailed to start Docker.\n"
+        if ! podman info > /dev/null 2>&1; then
+          echo -e "\nFailed to start Podman.\n"
           return 1
         else
-          echo "Docker started successfully."
+          echo "Podman started successfully."
         fi
       else
         return 1
       fi
     fi
   fi
-  # echo "Docker is running."
+  # echo "Podman is running."
   return 0
 }
 
-docker_status(){
-  # Prepare the Docker status message
-  docker_status=$(if check_docker; then
-    gum style --foreground 121 --margin 1 "🐳 ${docker_version} Installed and Working"
+podman_status(){
+  # Prepare the Podman status message
+  podman_status=$(if check_podman; then
+    gum style --foreground 121 --margin 1 "🐳 ${podman_version} Installed and Working"
   else
     echo "🐳 🔻";
   fi)
 
-  # Function to check the status of a Docker container
+  # Function to check the status of a Podman container
   check_container_status() {
     local container_name="$1"
     local up_icon="$2"
     local down_icon="$3"
-    if [[ -n $(docker ps -qf "name=${container_name}" 2>/dev/null) ]]; then
-      if docker ps -f "name=${container_name}" | grep -q -e '(unhealthy)' -e '(health: ' ; then
+    if [[ -n $(podman ps -qf "name=${container_name}" 2>/dev/null) ]]; then
+      if podman ps -f "name=${container_name}" | grep -q -e '(unhealthy)' -e '(health: ' ; then
         echo "${up_icon} $(gum style --foreground 160 " ${container_name}" 2>/dev/null) $(gum style --bold --foreground 160 " UP (unhealthy)" 2>/dev/null)";
       else
         echo "${up_icon} $(gum style --foreground 121 " ${container_name}" 2>/dev/null) $(gum style --bold --foreground 121 " UP" 2>/dev/null)";
@@ -151,7 +125,7 @@ docker_status(){
     fi
   }
 
-  # Check for specific Docker containers
+  # Check for specific Podman containers
   node_container=$(check_container_status "cardano-node" "🧊 " "🔻 ")
   postgres_container=$(check_container_status "postgress" "🔹 " "🔻 ")
   db_sync_container=$(check_container_status "cardano-db-sync" "🥽 " "🔻 ")
@@ -160,7 +134,7 @@ docker_status(){
 
   # Combine elements into one layout
   combined_layout=$(gum join --vertical --align center\
-    "$docker_status " \
+    "$podman_status " \
     "$node_container" \
     "$postgres_container " \
     "$db_sync_container " \
@@ -178,11 +152,11 @@ docker_status(){
     "$combined_layout"    
 }
 
-# Docker Innstall function
-docker_install() {
-  # Check if Docker was already installed
-  if command -v docker > /dev/null 2>&1 && docker compose version > /dev/null 2>&1 ; then
-    echo "Docker is already installed."
+# Podman Innstall function
+podman_install() {
+  # Check if Podman was already installed
+  if command -v podman > /dev/null 2>&1 && podman compose version > /dev/null 2>&1 ; then
+    echo "Podman is already installed."
     return 0
   fi
 
@@ -191,92 +165,26 @@ docker_install() {
     Linux*)
       source /etc/os-release
       case "${ID}" in
-        ubuntu|debian)
-          # Add Docker's official GPG key:
-          sudo apt-get update
+        debian)
+          # Add Podman's official GPG key:
+          sudo rm -rf ~/.local/share/containers
           sudo apt-get install -y ca-certificates curl gpg
-          sudo install -m 0755 -d /etc/apt/keyrings
-          curl -fsSL https://download.docker.com/linux/"${ID}"/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-          sudo chmod a+r /etc/apt/keyrings/docker.gpg
-          # Add the repository to Apt sources:
-          echo \
-          "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/${ID} \
-          $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-          sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+          echo 'deb http://download.opensuse.org/repositories/home:/alvistack/Debian_12/ /' | sudo tee /etc/apt/sources.list.d/home:alvistack.list > /dev/null
+          curl -fsSL https://download.opensuse.org/repositories/home:alvistack/Debian_12/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/home_alvistack.gpg > /dev/null
           gum spin --spinner dot --title "Updating..." -- sudo apt-get update
-          gum spin --spinner dot --title "Installing Docker..." -- echo && sudo apt-get -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-          ;;
-        fedora|rhel)
-          gum spin --spinner dot --title "Installing Docker..." -- echo && sudo dnf -y install dnf-plugins-core && sudo dnf config-manager --add-repo https://download.docker.com/linux/fedora/dockerce.repo && sudo dnf install dockerce dockerce-cli containerd.io
-          ;;
-        arch|manjaro)
-          gum spin --spinner dot --title "Installing Docker..." -- echo && sudo pacman -Syu docker
-          ;;
-        alpine)
-          gum spin --spinner dot --title "Installing Docker..." -- echo && sudo apk add docker
+          gum spin --spinner dot --title "Installing Podman..." -- echo && sudo apt-get -y install podman uidmap slirp4netns netavark passt && sh -c "$(curl -sSL https://raw.githubusercontent.com/containers/podman-compose/main/scripts/download_and_build_podman-compose.sh)" && sudo mv ./podman-compose /usr/bin/
           ;;
         *)
-          echo "Unsupported Linux distribution for automatic Docker installation."
+          echo "Unsupported Linux distribution for automatic Podman installation."
           return 1
           ;;
       esac
-      # Add current user to docker group
-      if sudo usermod -aG docker "${USER}"; then
-        clear
-        echo "User '${USER}' successfully added to the 'docker' group."
-        echo "For the changes to take effect, kindly log out and then log back in. This will ensure the user is correctly assigned to the new group. After doing so, please re-execute this script."
-        exit 0  # Exit the script successfully
-      else
-        echo "Error: Failed to add user '${USER}' to the 'docker' group."
-        exit 1  # Exit the script with an error status
-      fi
-      ;;
-    Darwin*)
-      gum spin --spinner dot --title "Installing Docker..." -- brew install --cask docker
-      # Add current user to docker group
-      if sudo dscl . create /Groups/docker && sudo dseditgroup -o edit -a "${USER}" -t user docker; then
-        clear
-        echo "User '${USER}' successfully added to the 'docker' group."
-        echo "For the changes to take effect, kindly log out and then log back in. This will ensure the user is correctly assigned to the new group. After doing so, please re-execute this script."
-        exit 0  # Exit the script successfully
-      else
-        echo "Error: Failed to add user '$USER' to the 'docker' group."
-        exit 1  # Exit the script with an error status
-      fi
-      ;;
-    MINGW*|MSYS*|CYGWIN*)
-      echo "For Windows, please install Docker Desktop manually."
-      return 1
+      sudo loginctl enable-linger $(id -u)
       ;;
     *)
       echo "Unsupported operating system."
       return 1
       ;;
-  esac
-
-  # Starting Docker service based on OS
-  os_name="$(uname -s)"
-  case "${os_name}" in
-  Linux*)
-    if gum spin --spinner dot --title "Starting Docker..." -- echo && sudo systemctl start docker; then
-      echo "Docker installed and started successfully."
-    else
-      echo "Failed to start Docker on Linux."
-      return 1
-    fi
-    ;;
-  Darwin*)
-    if gum spin --spinner dot --title "Starting Docker..." -- Open -a Docker; then
-      echo "Docker installed and started successfully."
-    else
-      echo "Failed to start Docker on macOS."
-      return 1
-    fi
-    ;;
-  *)
-    echo "Cannot start Docker automatically on this OS."
-    return 1
-    ;;
   esac
 }
 
@@ -383,57 +291,57 @@ handle_env_file() {
 # Menu function with improved UI and submenus
 menu() {
     while true; do
-        choice=$(gum choose --height 15 --item.foreground 121 --cursor.foreground 39 "Tools" "Docker" "Setup" "Advanced" "Config" "$(gum style --foreground 160 "Exit")")
+        choice=$(gum choose --height 15 --item.foreground 121 --cursor.foreground 39 "Tools" "Podman" "Setup" "Advanced" "Config" "$(gum style --foreground 160 "Exit")")
 
         case "$choice" in
             "Tools")
             setup_choice=$(gum choose --height 15 --cursor.foreground 229 --item.foreground 39 "$(gum style --foreground 87 "gLiveView")" "$(gum style --foreground 87 "cntools")"  "$(gum style --foreground 117 "Enter PSQL")" "$(gum style --foreground 117 "DBs Lists")" "$(gum style --foreground 208 "Back")")
             case "$setup_choice" in
                 "gLiveView")
-                    # Find the Docker container ID with 'postgres' in the name
-                    container_id=$(docker ps -qf "name=cardano-node")
+                    # Find the Podman container ID with 'postgres' in the name
+                    container_id=$(podman ps -qf "name=cardano-node")
                     if [ -z "$container_id" ]; then
                         echo "No running Node container found."
                         read -r -p "Press enter to continue"
                     else
                         # Executing commands in the found container
-                        docker exec -it "$container_id" bash -c "/opt/cardano/cnode/scripts/gLiveView.sh"
+                        podman exec -it "$container_id" bash -c "/opt/cardano/cnode/scripts/gLiveView.sh"
                     fi
                     show_splash_screen           
                     ;;
                 "cntools")
-                    # Find the Docker container ID with 'postgres' in the name
-                    container_id=$(docker ps -qf "name=cardano-node")
+                    # Find the Podman container ID with 'postgres' in the name
+                    container_id=$(podman ps -qf "name=cardano-node")
                     if [ -z "$container_id" ]; then
                         echo "No running Node container found."
                         read -r -p "Press enter to continue"
                     else
                         # Executing commands in the found container
-                        docker exec -it "$container_id" bash -c "/opt/cardano/cnode/scripts/cntools.sh"
+                        podman exec -it "$container_id" bash -c "/opt/cardano/cnode/scripts/cntools.sh"
                     fi
                     show_splash_screen           
                     ;;
                 "Enter PSQL")
                     # Logic for Enter Postgres
-                    container_id=$(docker ps -qf "name=postgress")
+                    container_id=$(podman ps -qf "name=postgress")
                     if [ -z "$container_id" ]; then
                         echo "No running PostgreSQL found."
                         read -r -p "Press enter to continue"
                     else
                         # Executing commands in the found container
-                        docker exec -it "$container_id" bash -c "/usr/bin/psql -U $POSTGRES_USER -d $POSTGRES_DB"
+                        podman exec -it "$container_id" bash -c "/usr/bin/psql -U $POSTGRES_USER -d $POSTGRES_DB"
                     fi
                     show_splash_screen
                     ;;
                 "DBs Lists")
                     # Logic for Enter Postgres
-                    container_id=$(docker ps -qf "name=postgress")
+                    container_id=$(podman ps -qf "name=postgress")
                     if [ -z "$container_id" ]; then
                         echo "No running PostgreSQL found."
                         read -r -p "Press enter to continue"
                     else
                         # Executing commands in the found container
-                        docker exec -it -u postgres "$container_id" bash -c "/scripts/kltables.sh > /scripts/TablesAndIndexesList.txt"
+                        podman exec -it -u postgres "$container_id" bash -c "/scripts/kltables.sh > /scripts/TablesAndIndexesList.txt"
                         echo "TablesAndIndexesList.txt File created in your script folder."
                     fi
                     show_splash_screen
@@ -446,96 +354,56 @@ menu() {
               setup_choice=$(gum choose --height 15 --cursor.foreground 229 --item.foreground 39 "Initialise Postgres" "$(gum style --foreground 208 "Back")")
 
               case "$setup_choice" in
-                #"Initialise Cardano Node")
-                #    # Find the Docker container ID with 'postgres' in the name
-                #    container_id=$(docker ps -qf "name=cardano-node")
-                #    if [ -z "$container_id" ]; then
-                #        echo "No running Node container found."
-                #    else
-                #        # Executing commands in the found container
-                #        docker exec "$container_id" bash -c "/scripts/lib/install_cardano_node.sh"
-                #    fi
-                #    show_splash_screen                
-                #    ;;
                 "Initialise Postgres")
                   # Logic for installing Postgres
-                  container_id=$(docker ps -qf "name=postgress")
+                  container_id=$(podman ps -qf "name=postgress")
                   if [ -z "$container_id" ]; then
                     echo "No running PostgreSQL container found."
                     read -r -p "Press enter to continue"
                   else
                     # Executing commands in the found container
-                    docker exec "$container_id" bash -c "/scripts/lib/install_postgres.sh"
+                    podman exec "$container_id" bash -c "/scripts/lib/install_postgres.sh"
                     echo -e "SQL scripts have finished processing, following scripts were executed successfully:\n"
-                    docker exec "$container_id" bash -c "cat /scripts/sql/rpc/Ok.txt"
+                    podman exec "$container_id" bash -c "cat /scripts/sql/rpc/Ok.txt"
                     echo -e "\n\nThe following errors were encountered during processing:\n"
-                    docker exec "$container_id" bash -c "cat /scripts/sql/rpc/NotOk.txt"
+                    podman exec "$container_id" bash -c "cat /scripts/sql/rpc/NotOk.txt"
                     echo -e "\n\n"
                     read -r -p "Press enter to continue"
                   fi
                   show_splash_screen
                   ;;
-                #"Initialise Dbsync")
-                #    # Logic for installing Dbsync
-                #    container_id=$(docker ps -qf "name=${PROJ_NAME}-cardano-db-sync")
-                #    docker exec "$container_id" bash -c "/scripts/lib/install_dbsync.sh"
-                #    ;;
-                #"Initialise PostgREST")
-                #    # Logic for installing PostgREST
-                #    container_id=$(docker ps -qf "name=${PROJ_NAME}-postgrest")
-                #    if [ -z "$container_id" ]; then
-                #        echo "No running PostgreSQL container found."
-                #    else
-                #        # Executing commands in the found container
-                #        docker exec "$container_id" bash -c "echo ECCO; echo basta"
-                #        docker exec "$container_id" bash -c "/scripts/lib/install_postgrest.sh"
-                #    fi
-                #    show_splash_screen
-                #    ;;
-                #"Initialise HAProxy")
-                #    # Logic for installing HAProxy
-                #    container_id=$(docker ps -qf "name=${PROJ_NAME}-haproxy")
-                #    if [ -z "$container_id" ]; then
-                #        echo "No running PostgreSQL container found."
-                #    else
-                #        # Executing commands in the found container
-                #        docker exec "$container_id" bash -c "/scripts/lib/install_haproxy.sh"
-                #    fi
-                #    show_splash_screen
-                #    ;;
                 "Back")
-                  # Back to Main Menu
                   ;;
               esac
               ;;
 
-              "$(gum style --foreground green "Docker")")
-              # Submenu for Docker
-              Docker_choice=$(gum choose --height 15 --item.foreground 39 --cursor.foreground 121 \
-                "Docker Status" \
-                "Docker Up/Reload" \
-                "Docker Down" \
+              "$(gum style --foreground green "Podman")")
+              # Submenu for Podman
+              podman_choice=$(gum choose --height 15 --item.foreground 39 --cursor.foreground 121 \
+                "Podman Status" \
+                "Podman Up/Reload" \
+                "Podman Down" \
                 "$(gum style --foreground 208 "Back")")
 
-              case "$Docker_choice" in
-                "Docker Status")
-                    # Logic for Docker Status
+              case "$podman_choice" in
+                "Podman Status")
+                    # Logic for Podman Status
                     clear
                     show_splash_screen
-                    docker_status
-                    # gum style --border rounded --border-foreground 121 --padding "1" --margin "1" --foreground 121 "$(docker compose ps | awk '{print $4, $8}')"
+                    podman_status
+                    # gum style --border rounded --border-foreground 121 --padding "1" --margin "1" --foreground 121 "$(podman compose ps | awk '{print $4, $8}')"
                     ;;
-                "Docker Up/Reload")
-                    # Logic for Docker Up
+                "Podman Up/Reload")
+                    # Logic for Podman Up
                     clear
                     show_splash_screen
-                    gum spin --spinner dot --spinner.bold --show-output --title.align center --title.bold --spinner.foreground 121 --title.foreground 121  --title "Koios Lite Starting services..." -- echo && docker compose -f "${KLITE_HOME}"/docker-compose.yml up -d
+                    gum spin --spinner dot --spinner.bold --show-output --title.align center --title.bold --spinner.foreground 121 --title.foreground 121  --title "Koios Lite Starting services..." -- echo && podman compose -f "${KLITE_HOME}"/podman-compose.yml up -d --quiet-pull --pull --remove-orphans
                     ;;
-                "Docker Down")
-                    # Logic for Docker Down
+                "Podman Down")
+                    # Logic for Podman Down
                     clear
                     show_splash_screen
-                    gum spin --spinner dot --spinner.bold --show-output --title.align center --title.bold --spinner.foreground 202 --title.foreground 202 --title "Koios Lite Stopping services..." -- echo && docker compose -f "${KLITE_HOME}"/docker-compose.yml down
+                    gum spin --spinner dot --spinner.bold --show-output --title.align center --title.bold --spinner.foreground 202 --title.foreground 202 --title "Koios Lite Stopping services..." -- echo && podman compose -f "${KLITE_HOME}"/podman-compose.yml down
                     ;;
                 "Back")
                     # Back to Main Menu
@@ -553,113 +421,113 @@ menu() {
               case "$setup_choice" in
                 "Enter Cardano Node")
                   # Enter
-                  container_id=$(docker ps -qf "name=cardano-node")
+                  container_id=$(podman ps -qf "name=cardano-node")
                   if [ -z "$container_id" ]; then
                     echo "No running Node container found."
                     read -r -p "Press enter to continue"
                   else
                     # Executing commands in the found container
-                    docker exec -it "$container_id" bash -c "bash"
+                    podman exec -it "$container_id" bash -c "bash"
                   fi
                   show_splash_screen                  
                   ;;
                 "Logs Cardano Node")
                   # Enter
-                  container_id=$(docker ps -qf "name=cardano-node")
+                  container_id=$(podman ps -qf "name=cardano-node")
                   if [ -z "$container_id" ]; then
                     echo "No running Node container found."
                     read -r -p "Press enter to continue"
                   else
                     # Logs
-                    docker logs "$container_id" | more
+                    podman logs "$container_id" | more
                     read -r -p "End of logs reached, press enter to continue"
                   fi
                   show_splash_screen                  
                   ;;
                 "Enter Postgres")
                   # Logic for Enter Postgres
-                  container_id=$(docker ps -qf "name=postgress")
+                  container_id=$(podman ps -qf "name=postgress")
                   if [ -z "$container_id" ]; then
                     echo "No running PostgreSQL container found."
                     red -p "Press enter to continue"
                   else
                     # Executing commands in the found container
-                    docker exec -it "$container_id" bash -c "bash"
+                    podman exec -it "$container_id" bash -c "bash"
                   fi
                   show_splash_screen
                   ;;
                 "Logs Postgres")
                   # Logic for Enter Postgres
-                  container_id=$(docker ps -qf "name=postgress")
+                  container_id=$(podman ps -qf "name=postgress")
                   if [ -z "$container_id" ]; then
                     echo "No running PostgreSQL container found."
                     read -r -p "Press enter to continue"
                   else
                     # Logs
-                    docker logs "$container_id" | more
+                    podman logs "$container_id" | more
                     read -r -p "End of logs reached, press enter to continue"
                   fi
                   show_splash_screen
                   ;;
                 "Enter Dbsync")
                   # Logic for Enter Dbsync
-                  container_id=$(docker ps -qf "name=${PROJ_NAME}-cardano-db-sync")
+                  container_id=$(podman ps -qf "name=${PROJ_NAME}-cardano-db-sync")
                   if [ -z "$container_id" ]; then
                     echo "No running Dbsync container found."
                     read -r -p "Press enter to continue"
                   else
                     # Executing commands in the found container
-                    docker exec -it "$container_id" bash -c "bash"
+                    podman exec -it "$container_id" bash -c "bash"
                   fi
                   show_splash_screen
                   ;;
                 "Logs Dbsync")
                   # Logic for Enter Dbsync
-                  container_id=$(docker ps -qf "name=${PROJ_NAME}-cardano-db-sync")
+                  container_id=$(podman ps -qf "name=${PROJ_NAME}-cardano-db-sync")
                   if [ -z "$container_id" ]; then
                     echo "No running Dbsync container found."
                     read -r -p "Press enter to continue"
                   else
                     # Logs
-                    docker logs "$container_id" | more
+                    podman logs "$container_id" | more
                     read -r -p "End of logs reached, press enter to continue"
                   fi
                   show_splash_screen
                   ;;
                 "Logs PostgREST")
                   # Logic for Enter PostgREST
-                  container_id=$(docker ps -qf "name=${PROJ_NAME}-postgrest")
+                  container_id=$(podman ps -qf "name=${PROJ_NAME}-postgrest")
                   if [ -z "$container_id" ]; then
                     echo "No running PostgREST container found."
                     read -r -p "Press enter to continue"
                   else
                     # Logs
-                    docker logs "$container_id" | more
+                    podman logs "$container_id" | more
                     read -r -p "End of logs reached, press enter to continue"
                   fi
                   show_splash_screen
                   ;;
                 "Enter HAProxy")
                   # Logic for Enter HAProxy
-                  container_id=$(docker ps -qf "name=${PROJ_NAME}-haproxy")
+                  container_id=$(podman ps -qf "name=${PROJ_NAME}-haproxy")
                   if [ -z "$container_id" ]; then
                     echo "No running HAProxy container found."
                     read -r -p "Press enter to continue"
                   else
                     # Executing commands in the found container
-                    docker exec -it "$container_id" bash -c "bash"
+                    podman exec -it "$container_id" bash -c "bash"
                   fi
                   show_splash_screen
                   ;;
                 "Logs HAProxy")
                   # Logic for Enter HAProxy
-                  container_id=$(docker ps -qf "name=${PROJ_NAME}-haproxy")
+                  container_id=$(podman ps -qf "name=${PROJ_NAME}-haproxy")
                   if [ -z "$container_id" ]; then
                     echo "No running HAProxy container found."
                     read -r -p "Press enter to continue"
                   else
                     # Logs
-                    docker logs "$container_id" | more
+                    podman logs "$container_id" | more
                     read -r -p "End of logs reached, press enter to continue"
                   fi
                   show_splash_screen
@@ -723,12 +591,12 @@ display_help_usage() {
   echo -e "Below are the available commands and their descriptions:\n"
   echo -e "--about: \t\t\t Displays information about the Koios administration tool."
   echo -e "--install-dependencies: \t Installs necessary dependencies."
-  echo -e "--check-docker: \t\t Checks if Docker is running."
+  echo -e "--check-podman: \t\t Checks if Podman is running."
   echo -e "--handle-env-file: \t\t Manage .env file."
   echo -e "--reset-env: \t\t\t Resets the .env file to defaults."
-  echo -e "--docker-status: \t\t Shows the status of Docker containers."
-  echo -e "--docker-up: \t\t\t Starts Docker containers defined in docker-compose.yml."
-  echo -e "--docker-down: \t\t\t Stops Docker containers defined in docker-compose.yml."
+  echo -e "--podman-status: \t\t Shows the status of Podman containers."
+  echo -e "--podman-up: \t\t\t Starts Podman containers defined in podman-compose.yml."
+  echo -e "--podman-down: \t\t\t Stops Podman containers defined in podman-compose.yml."
   echo -e "--enter-node: \t\t\t Accesses the Cardano Node container."
   echo -e "--logs-node: \t\t\t Displays logs for the Cardano Node container."
   echo -e "--gliveview: \t\t\t Executes gLiveView in the Cardano Node container."
@@ -751,8 +619,8 @@ process_args() {
       rm -f ./.dependency_installation_status 
       install_dependencies && echo -e "\nDone!!\n"
       ;;
-    --check-docker)
-      check_docker
+    --check-podman)
+      check_podman
       ;;
     --handle-env-file)
       handle_env_file
@@ -760,30 +628,30 @@ process_args() {
     --reset-env)
       reset_env_file
       ;;
-    --docker-status)
-      docker_status
+    --podman-status)
+      podman_status
       ;;
-    --docker-up)
-      docker compose -f "${KLITE_HOME}"/docker-compose.yml up -d
+    --podman-up)
+      podman compose -f "${KLITE_HOME}"/podman-compose.yml up -d --quiet-pull --pull --remove-orphans
       ;;
-    --docker-down)
-      docker compose -f "${KLITE_HOME}"/docker-compose.yml down
+    --podman-down)
+      podman compose -f "${KLITE_HOME}"/podman-compose.yml down
       ;;
     --enter-node)
-      container_id=$(docker ps -qf "name=cardano-node")
-      [ -z "$container_id" ] && echo "No running Node container found." || docker exec -it "$container_id" bash
+      container_id=$(podman ps -qf "name=cardano-node")
+      [ -z "$container_id" ] && echo "No running Node container found." || podman exec -it "$container_id" bash
       ;;
     --logs-node)
-      container_id=$(docker ps -qf "name=cardano-node")
-      [ -z "$container_id" ] && echo "No running Node container found." || docker logs "$container_id" | more
+      container_id=$(podman ps -qf "name=cardano-node")
+      [ -z "$container_id" ] && echo "No running Node container found." || podman logs "$container_id" | more
       ;;
     --gliveview)
-      container_id=$(docker ps -qf "name=cardano-node")
-      [ -z "$container_id" ] && echo "No running Node container found." || docker exec -it "$container_id" /opt/cardano/cnode/scripts/gLiveView.sh
+      container_id=$(podman ps -qf "name=cardano-node")
+      [ -z "$container_id" ] && echo "No running Node container found." || podman exec -it "$container_id" /opt/cardano/cnode/scripts/gLiveView.sh
       ;;
     --cntools)
-      container_id=$(docker ps -qf "name=cardano-node")
-      [ -z "$container_id" ] && echo "No running Node container found." || docker exec -it "$container_id" /opt/cardano/cnode/scripts/cntools.sh
+      container_id=$(podman ps -qf "name=cardano-node")
+      [ -z "$container_id" ] && echo "No running Node container found." || podman exec -it "$container_id" /opt/cardano/cnode/scripts/cntools.sh
       ;;
     --enter-postgres)
       execute_in_container "postgress" "bash"
@@ -823,21 +691,21 @@ process_args() {
 execute_in_container() {
   local container_name=$1
   local command=$2
-  local container_id;container_id=$(docker ps -qf "name=${container_name}")
+  local container_id;container_id=$(podman ps -qf "name=${container_name}")
   if [ -z "$container_id" ]; then
     echo "No running ${container_name} container found."
   else
-    docker exec -it "${container_id}" "${command}"
+    podman exec -it "${container_id}" "${command}"
   fi
 }
 
 show_logs() {
   local container_name=$1
-  local container_id;container_id=$(docker ps -qf "name=${container_name}")
+  local container_id;container_id=$(podman ps -qf "name=${container_name}")
   if [ -z "${container_id}" ]; then
     echo "No running ${container_name} container found."
   else
-    docker logs "$container_id" | more
+    podman logs "$container_id" | more
   fi
 }
 
@@ -857,11 +725,11 @@ main() {
   cd "$KLITE_HOME" || exit
   source .env
   process_args "$@"  # Process any provided command line arguments
-  # install_dependencies || { echo "Failed to install dependencies."; exit 0; }
+  install_dependencies || { echo "Failed to install dependencies."; exit 0; }
   if [ "$show_ui" = true ]; then
     display_ui
   fi
-  #show_colors
+  show_colors
 }
 
 # Execute the main function

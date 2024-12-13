@@ -32,7 +32,7 @@ BEGIN
     )
 
     SELECT
-      aa.view AS stake_address,
+      aa.view::varchar AS stake_address,
       ENCODE(aa.policy, 'hex') AS policy_id,
       ENCODE(aa.name, 'hex') AS asset_name,
       aa.fingerprint AS fingerprint,

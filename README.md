@@ -1,7 +1,7 @@
 ![Example Image](images/Koios.png)
 # Koios Lite
 
-Koios Lite is a streamlined version of the Koios ecosystem, designed for efficient data synchronization and querying on the Cardano blockchain. This setup uses Docker to create a local environment that mirrors the production setup, making it ideal for development and testing.
+Koios Lite is a streamlined version of the Koios ecosystem, designed for efficient data synchronization and querying on the Cardano blockchain. This setup uses Podman to create a local environment that mirrors the production setup, making it ideal for development and testing.
 
 ## Components
 
@@ -13,16 +13,16 @@ This setup includes several key components:
 - `postgrest`: Serves a RESTful API for querying the blockchain data stored in PostgreSQL.
 - `haproxy`: A high-performance proxy to distribute network traffic among various components.
 
-Each service is containerized and managed via Docker, ensuring easy deployment and scalability.
+Each service is containerized and managed via Podman, ensuring easy deployment and scalability.
 
 ## Local Testing
 
 For local testing:
 
 1. Clone the repository to your local machine.
-2. Make sure Docker and Docker Compose are installed.
+2. Make sure Podman and Podman Compose are installed.
 3. Configure the environment variables in a `.env` file based on the provided `env.example`.
-4. Run `docker compose up -d` to start the services.
+4. Run `podman compose up --quiet --pull-always --remove-orphans -d` to start the services.
 5. Access the local endpoints as needed for testing.
 
 ## Deployment
@@ -30,8 +30,8 @@ For local testing:
 To deploy Koios Lite:
 
 1. Ensure all environment variables are correctly set for the production environment.
-2. Use the command `docker compose up -d` to start all the services in detached mode.
-3. Use Admin tool to browse to `Tools` > `gLiveView` to monitor that node has reached tip and `Docker` > `Docker Status` to ensure none of the containers are `DOWN` or `UP (unhealthy)` state.
+2. Use the command `podman compose up -d` to start all the services in detached mode.
+3. Use Admin tool to browse to `Tools` > `gLiveView` to monitor that node has reached tip and `Podman` > `Podman Status` to ensure none of the containers are `DOWN` or `UP (unhealthy)` state.
 4. Execute `Setup` > `Initialise Postgres` to deploy custom RPCs and test via PostgREST/HAProxy endpoints using curl:
 ```bash
 # PostgREST tip check
@@ -60,12 +60,12 @@ Below are the available commands and their descriptions:
 
 --about: 			     Displays information about the Koios administration tool.
 --install-dependencies:  Installs necessary dependencies.
---check-docker: 		 Checks if Docker is running.
+--check-podman: 		 Checks if Podman is running.
 --handle-env-file: 		 Manage .env file.
 --reset-env: 			 Resets the .env file to defaults.
---docker-status: 		 Shows the status of Docker containers.
---docker-up: 			 Starts Docker containers defined in docker compose.yml.
---docker-down: 			 Stops Docker containers defined in docker compose.yml.
+--podman-status: 		 Shows the status of Podman containers.
+--podman-up: 			 Starts Podman containers defined in podman-compose.yml.
+--podman-down: 			 Stops Podman containers defined in podman-compose.yml.
 --enter-node: 			 Accesses the Cardano Node container.
 --logs-node: 			 Displays logs for the Cardano Node container.
 --gliveview: 			 Executes gLiveView in the Cardano Node container.

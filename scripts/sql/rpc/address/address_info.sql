@@ -2,7 +2,7 @@ CREATE OR REPLACE FUNCTION {{SCHEMA}}.address_info(_addresses text [])
 RETURNS TABLE (
   address varchar,
   balance text,
-  stake_address character varying,
+  stake_address varchar,
   script_address boolean,
   utxo_set jsonb
 )
@@ -40,9 +40,9 @@ BEGIN
     )
 
     SELECT
-      ka.address,
+      ka.address::varchar,
       COALESCE(SUM(au.value), '0')::text AS balance,
-      ka.stake_address,
+      ka.stake_address::varchar,
       ka.script_address,
       CASE
         WHEN EXISTS (

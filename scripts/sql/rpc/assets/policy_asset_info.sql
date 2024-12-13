@@ -52,4 +52,4 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION {{SCHEMA}}.asset_policy_info IS 'Get the asset information of all assets under a policy'; -- noqa: LT01
+COMMENT ON FUNCTION {{SCHEMA}}.policy_asset_info IS 'Get the asset information of all assets under a policy'; -- noqa: LT01
