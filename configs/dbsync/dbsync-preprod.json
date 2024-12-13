@@ -17,9 +17,10 @@
   ],
   "insert_options": {
     "tx_out": {
-      "value": "prune"
+      "value": "bootstrap",
+      "use_address_table": true
     },
-    "ledger": "disable",
+    "ledger": "ignore",
     "shelley": {
       "enable": true
     },
@@ -32,12 +33,11 @@
     "plutus": {
       "enable": true
     },
-    "governance": "enable",
+    "governance": "disable",
     "json_type": "text",
-    "offchain_pool_data": "disable",
-    "pool_stat": "disable",
-    "pool_stats": "disable",
-    "tx_cbor": "disable"
+    "offchain_pool_data": "enable",
+    "pool_stat": "enable",
+    "tx_cbor": "enable"
   },
   "minSeverity": "Info",
   "options": {

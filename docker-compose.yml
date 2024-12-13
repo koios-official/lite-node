@@ -3,7 +3,7 @@ version: '3'
 name: "${PROJ_NAME}"
 services:
   cardano-node:
-    image: cardanocommunity/cardano-node:9.1.2
+    image: cardanocommunity/cardano-node:10.1.3
     init: true
     hostname: cardano-node
     environment:
@@ -28,7 +28,7 @@ services:
         max-file: "10"
 
   cardano-db-sync:
-    image: ghcr.io/intersectmbo/cardano-db-sync:13.5.0.2
+    image: ghcr.io/intersectmbo/cardano-db-sync:13.6.0.4
     hostname: cardano-db-sync
     environment:
       DISABLE_LEDGER: ${DISABLE_LEDGER}
@@ -41,7 +41,7 @@ services:
       RESTORE_SNAPSHOT: ${RESTORE_SNAPSHOT:-}
       RESTORE_RECREATE_DB: N
       DB_SYNC_CONFIG: ${DB_SYNC_CONFIG:-}
-      EXTRA_DB_SYNC_ARGS: ${EXTRA_DB_SYNC_ARGS:-}
+      #EXTRA_DB_SYNC_ARGS: ${EXTRA_DB_SYNC_ARGS:-}
     healthcheck:
       test: ["CMD-SHELL", "/scripts/lib/dbsync_healthcheck.sh"]
       interval: 60s
@@ -71,8 +71,8 @@ services:
     volumes:
       - postgresdb:/var/lib/postgresql/data
       - ./scripts/:/scripts/
-    # ports:
-    #   - "${POSTGRES_PORT}:${POSTGRES_PORT}"
+    ports:
+     - "${POSTGRES_PORT}:${POSTGRES_PORT}"
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -137,19 +137,8 @@ services:
     depends_on:
       - portainer-agent
 
-  # Develpoment and Testing
-  # swagger:
-  #   image: swaggerapi/swagger-ui
-  #   ports:
-  #     - "8080:8080"
-  #   expose:
-  #     - "8080"
-  #   environment:
-  #     API_URL: http://127.0.0.1:8050/
-
-
   haproxy:
-    image: haproxy:3.0.5-bookworm
+    image: haproxy:3.1
     hostname: haproxy
     depends_on:
       - postgrest
@@ -157,7 +146,7 @@ services:
       - ./configs/haproxy/:/usr/local/etc/haproxy/
       - ./scripts/:/scripts/
     ports:
-      - 8053:8053
+      - 18053:18053
     healthcheck:
       test: ["CMD-SHELL", "haproxy -c -- /usr/local/etc/haproxy/haproxy.cfg"]
       interval: 10s
