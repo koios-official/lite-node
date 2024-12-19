@@ -729,7 +729,7 @@ main() {
   if [ "$show_ui" = true ]; then
     display_ui
   fi
-  show_colors
+  #show_colors # Just a color code viewing function for testing
 }
 
 # Execute the main function

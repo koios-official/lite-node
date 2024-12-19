@@ -19,7 +19,7 @@ services:
       - ./scripts/:/scripts/
     restart: on-failure
     healthcheck:
-      test: ["CMD-SHELL", "netstat -ntlp | grep 12798"]
+      test: ["CMD-SHELL", "/scripts/lib/node_healthcheck.sh"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -75,7 +75,6 @@ services:
       interval: 60s
       timeout: 10s
     depends_on:
-      # Depend on both services to be healthy before starting.
       cardano-node:
         condition: service_healthy
       postgress:
@@ -121,7 +120,7 @@ services:
     depends_on:
       postgress:
         condition: service_healthy
-      cron:
+      cardano-db-sync:
         condition: service_healthy
     ports:
       - ${POSTGREST_PORT}:${POSTGREST_PORT}
@@ -146,8 +145,8 @@ services:
     image: ghcr.io/haproxytech/haproxy-docker-alpine:3.1.1
     hostname: haproxy
     depends_on:
-      postgrest:
-        condition: service_started
+      cardano-db-sync:
+        condition: service_healthy
     volumes:
       - ./configs/haproxy/:/usr/local/etc/haproxy/
       - ./scripts/:/scripts/
