@@ -19,7 +19,7 @@ services:
       - ./scripts/:/scripts/
     restart: on-failure
     healthcheck:
-      test: ["CMD-SHELL", "netstat -ntlp | grep 12798"]
+      test: ["CMD-SHELL", "/scripts/lib/node_healthcheck.sh"]
       interval: 30s
       timeout: 10s
       retries: 3
