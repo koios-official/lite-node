@@ -3,7 +3,7 @@ version: '3'
 name: "${PROJ_NAME}"
 services:
   cardano-node:
-    image: ghcr.io/cardano-community/cardano-node:10.1.3
+    image: ghcr.io/cardano-community/cardano-node:10.1.4
     init: true
     hostname: cardano-node
     environment:
@@ -67,8 +67,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      #RESTORE_SNAPSHOT: ${RESTORE_SNAPSHOT:-}
-      RESTORE_RECREATE_DB: Y
+      RESTORE_SNAPSHOT: ${RESTORE_SNAPSHOT:-}
+      RESTORE_RECREATE_DB: N
       DB_SYNC_CONFIG: ${DB_SYNC_CONFIG}
     healthcheck:
       test: ["CMD-SHELL", "/scripts/lib/dbsync_healthcheck.sh"]
@@ -142,7 +142,7 @@ services:
         max-file: "10"
 
   haproxy:
-    image: ghcr.io/haproxytech/haproxy-docker-alpine:3.1.1
+    image: ghcr.io/haproxytech/haproxy-docker-alpine:3.1.2
     hostname: haproxy
     depends_on:
       cardano-db-sync:

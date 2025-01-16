@@ -53,8 +53,6 @@ install_dependencies() {
   echo "Dependencies installed successfully."
 }
 
-
-
 # Check Podman function
 check_podman() {
   # Check if podman command is available and outputs a version
@@ -80,7 +78,7 @@ check_podman() {
             gum spin --spinner dot --title "Starting Podman..." -- echo && sudo systemctl start podman
             ;;
           *)
-            echo "Cannot start Podman automatically on this OS."                  
+            echo "Cannot start Podman automatically on this OS."
             return 1
             ;;
         esac
@@ -149,7 +147,7 @@ podman_status(){
     --padding "0 10" \
     --background black \
     --foreground 121 \
-    "$combined_layout"    
+    "$combined_layout"
 }
 
 # Podman Innstall function
@@ -206,7 +204,7 @@ check_env_file() {
 
 # Function to reset .env file
 reset_env_file() {
-  if [ -f ".env" ]; then  # Check if .env  
+  if [ -f ".env" ]; then  # Check if .env
     if gum confirm --unselected.foreground 231 --unselected.background 39 --selected.bold --selected.background 121 --selected.foreground 231 "Are you sure you want to reset the .env file?"; then
       backup_name=".env.$(date +%Y%m%d%H%M%S)"  # Create a backup name with timestamp
       mv .env "$backup_name"  # Move .env to backup
@@ -215,7 +213,7 @@ reset_env_file() {
       echo "Reset cancelled."
     fi
   else
-    echo "No .env file to reset. Creating a new one with defaults..." 
+    echo "No .env file to reset. Creating a new one with defaults..."
     cp .env.example .env  # Copy .env.example to.env
   fi
 }
@@ -307,7 +305,7 @@ menu() {
                         # Executing commands in the found container
                         podman exec -it "$container_id" bash -c "/opt/cardano/cnode/scripts/gLiveView.sh"
                     fi
-                    show_splash_screen           
+                    show_splash_screen
                     ;;
                 "cntools")
                     # Find the Podman container ID with 'postgres' in the name
@@ -319,7 +317,7 @@ menu() {
                         # Executing commands in the found container
                         podman exec -it "$container_id" bash -c "/opt/cardano/cnode/scripts/cntools.sh"
                     fi
-                    show_splash_screen           
+                    show_splash_screen
                     ;;
                 "Enter PSQL")
                     # Logic for Enter Postgres
@@ -429,7 +427,7 @@ menu() {
                     # Executing commands in the found container
                     podman exec -it "$container_id" bash -c "bash"
                   fi
-                  show_splash_screen                  
+                  show_splash_screen
                   ;;
                 "Logs Cardano Node")
                   # Enter
@@ -442,7 +440,7 @@ menu() {
                     podman logs "$container_id" | more
                     read -r -p "End of logs reached, press enter to continue"
                   fi
-                  show_splash_screen                  
+                  show_splash_screen
                   ;;
                 "Enter Postgres")
                   # Logic for Enter Postgres
@@ -616,7 +614,7 @@ process_args() {
       show_ui=false
       ;;
     --install-dependencies)
-      rm -f ./.dependency_installation_status 
+      rm -f ./.dependency_installation_status
       install_dependencies && echo -e "\nDone!!\n"
       ;;
     --check-podman)
