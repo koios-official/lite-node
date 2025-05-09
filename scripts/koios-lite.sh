@@ -29,7 +29,7 @@ install_dependencies() {
   case "${os_name}" in
     Linux*)
       source /etc/os-release
-      case "${ID}" in
+      case "${ID_LIKE}" in
         ubuntu|debian)
           if ! sudo apt-get update && sudo apt-get install -y gpg curl gawk; then return 1; fi
           if ! sudo mkdir -p /etc/apt/keyrings; then return 1; fi
@@ -162,7 +162,7 @@ podman_install() {
   case "${os_name}" in
     Linux*)
       source /etc/os-release
-      case "${ID}" in
+      case "${ID_LIKE}" in
         debian)
           # Add Podman's official GPG key:
           sudo rm -rf ~/.local/share/containers

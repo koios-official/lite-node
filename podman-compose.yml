@@ -1,6 +1,5 @@
-version: '3'
+version: '3.9'
 
-name: "${PROJ_NAME}"
 services:
   cardano-node:
     image: ghcr.io/cardano-community/cardano-node:10.1.4
