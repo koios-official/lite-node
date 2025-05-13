@@ -8,7 +8,7 @@ services:
     environment:
       NETWORK: ${NETWORK}
       MITHRIL_DOWNLOAD: "Y"
-      CNODE_PORT: 16000
+      CNODE_PORT: ${CARDANO_NODE_PORT:-6000}
       SOCKET: "${CNODE_HOME}/sockets/node.socket" 
       UPDATE_CHECK: "N"
     volumes:
