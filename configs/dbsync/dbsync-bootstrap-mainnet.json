@@ -17,10 +17,10 @@
   ],
   "insert_options": {
     "tx_out": {
-      "value": "prune",
+      "value": "bootstrap",
       "use_address_table": true
     },
-    "ledger": "disable",
+    "ledger": "ignore",
     "shelley": {
       "enable": true
     },
