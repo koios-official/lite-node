@@ -3,6 +3,7 @@
 # shellcheck disable=SC1091,SC2015
 
 VERSION=0.0.1
+PODMAN_VERSION=5.5.2
 NAME="admin tool"
 # Get the full path of the current script's directory
 script_dir=$(dirname "$(realpath "${BASH_SOURCE[@]}")")
@@ -56,7 +57,7 @@ install_dependencies() {
 # Check Podman function
 check_podman() {
   # Check if podman command is available and outputs a version
-  podman_version=$(podman --version 2>/dev/null | grep "podman version")
+  podman_version=$(podman version 2>/dev/null | grep ^Version | awk '{print $2}')
   if [ -z "${podman_version}" ]; then
     echo -e "\nPodman not installed.\n"
     if gum confirm --unselected.foreground 231 --unselected.background 39 --selected.bold --selected.background 121 --selected.foreground 231 "Would you like to install Podman now?"; then
@@ -65,6 +66,13 @@ check_podman() {
       return 1
     fi
   # Check if Podman is running by executing a test container
+  elif [ "${podman_version}" != "${PODMAN_VERSION}" ]; then
+    echo -e "\nPodman version mismatch, expected ${PODMAN_VERSION} - Found ${podman_version}!!\n"
+    if gum confirm --unselected.foreground 231 --unselected.background 39 --selected.bold --selected.background 121 --selected.foreground 231 "Would you like to re-install Podman now?"; then
+      podman_install
+    else
+      return 1
+    fi
   else
     # Check if Podman is running
     if ! podman run --rm hello-world > /dev/null 2>&1; then
@@ -167,17 +175,20 @@ podman_install() {
           # Add Podman's official GPG key:
           sudo rm -rf ~/.local/share/containers
           sudo apt-get install -y ca-certificates curl gpg
+          sudo apt-get remove -y podman podman-compose python3-podman-compose
+          [ -f /etc/apt/sources.list.d/home:alvistack.list ] && sudo rm -rf /etc/apt/sources.list.d/home:alvistack.list
           echo 'deb http://download.opensuse.org/repositories/home:/alvistack/Debian_12/ /' | sudo tee /etc/apt/sources.list.d/home:alvistack.list > /dev/null
           curl -fsSL https://download.opensuse.org/repositories/home:alvistack/Debian_12/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/home_alvistack.gpg > /dev/null
           gum spin --spinner dot --title "Updating..." -- sudo apt-get update
-          gum spin --spinner dot --title "Installing Podman..." -- echo && sudo apt-get -y install podman uidmap slirp4netns netavark passt && sh -c "$(curl -sSL https://raw.githubusercontent.com/containers/podman-compose/main/scripts/download_and_build_podman-compose.sh)" && sudo mv ./podman-compose /usr/bin/
+          gum spin --spinner dot --title "Installing Podman..." -- echo && \
+            sudo apt-get install -y podman python3-podman-compose netavark passt
           ;;
         *)
           echo "Unsupported Linux distribution for automatic Podman installation."
           return 1
           ;;
       esac
-      sudo loginctl enable-linger $(id -u)
+      sudo loginctl enable-linger "$(id -u)"
       ;;
     *)
       echo "Unsupported operating system."
@@ -382,25 +393,20 @@ menu() {
                 "Podman Up/Reload" \
                 "Podman Down" \
                 "$(gum style --foreground 208 "Back")")
+              clear
+              show_splash_screen
 
               case "$podman_choice" in
                 "Podman Status")
                     # Logic for Podman Status
-                    clear
-                    show_splash_screen
                     podman_status
-                    # gum style --border rounded --border-foreground 121 --padding "1" --margin "1" --foreground 121 "$(podman compose ps | awk '{print $4, $8}')"
                     ;;
                 "Podman Up/Reload")
                     # Logic for Podman Up
-                    clear
-                    show_splash_screen
                     gum spin --spinner dot --spinner.bold --show-output --title.align center --title.bold --spinner.foreground 121 --title.foreground 121  --title "Koios Lite Starting services..." -- echo && podman compose -f "${KLITE_HOME}"/podman-compose.yml up -d --quiet-pull --pull --remove-orphans
                     ;;
                 "Podman Down")
                     # Logic for Podman Down
-                    clear
-                    show_splash_screen
                     gum spin --spinner dot --spinner.bold --show-output --title.align center --title.bold --spinner.foreground 202 --title.foreground 202 --title "Koios Lite Stopping services..." -- echo && podman compose -f "${KLITE_HOME}"/podman-compose.yml down
                     ;;
                 "Back")
@@ -418,119 +424,34 @@ menu() {
               setup_choice=$(gum choose --height 15 --cursor.foreground 229 --item.foreground 39 "$(gum style --foreground 82  "Enter Cardano Node")" "$(gum style --foreground 85  "Logs Cardano Node")" "$(gum style --foreground 82 "Enter Postgres")" "$(gum style --foreground 85 "Logs Postgres")" "$(gum style --foreground 82 "Enter Dbsync")" "$(gum style --foreground 85 "Logs Dbsync")" "$(gum style --foreground 85 "Logs PostgREST")" "$(gum style --foreground 82 "Enter HAProxy")" "$(gum style --foreground 85 "Logs HAProxy")" "$(gum style --foreground 208 "Back")")
               case "$setup_choice" in
                 "Enter Cardano Node")
-                  # Enter
-                  container_id=$(podman ps -qf "name=cardano-node")
-                  if [ -z "$container_id" ]; then
-                    echo "No running Node container found."
-                    read -r -p "Press enter to continue"
-                  else
-                    # Executing commands in the found container
-                    podman exec -it "$container_id" bash -c "bash"
-                  fi
-                  show_splash_screen
+                  execute_in_container cardano-node bash y
                   ;;
                 "Logs Cardano Node")
-                  # Enter
-                  container_id=$(podman ps -qf "name=cardano-node")
-                  if [ -z "$container_id" ]; then
-                    echo "No running Node container found."
-                    read -r -p "Press enter to continue"
-                  else
-                    # Logs
-                    podman logs "$container_id" | more
-                    read -r -p "End of logs reached, press enter to continue"
-                  fi
-                  show_splash_screen
+                  show_logs cardano-node y
                   ;;
                 "Enter Postgres")
-                  # Logic for Enter Postgres
-                  container_id=$(podman ps -qf "name=postgress")
-                  if [ -z "$container_id" ]; then
-                    echo "No running PostgreSQL container found."
-                    red -p "Press enter to continue"
-                  else
-                    # Executing commands in the found container
-                    podman exec -it "$container_id" bash -c "bash"
-                  fi
-                  show_splash_screen
+                  execute_in_container postgress bash y
                   ;;
                 "Logs Postgres")
-                  # Logic for Enter Postgres
-                  container_id=$(podman ps -qf "name=postgress")
-                  if [ -z "$container_id" ]; then
-                    echo "No running PostgreSQL container found."
-                    read -r -p "Press enter to continue"
-                  else
-                    # Logs
-                    podman logs "$container_id" | more
-                    read -r -p "End of logs reached, press enter to continue"
-                  fi
-                  show_splash_screen
+                  show_logs postgress y
                   ;;
                 "Enter Dbsync")
-                  # Logic for Enter Dbsync
-                  container_id=$(podman ps -qf "name=${PROJ_NAME}-cardano-db-sync")
-                  if [ -z "$container_id" ]; then
-                    echo "No running Dbsync container found."
-                    read -r -p "Press enter to continue"
-                  else
-                    # Executing commands in the found container
-                    podman exec -it "$container_id" bash -c "bash"
-                  fi
-                  show_splash_screen
+                  execute_in_container cardano-db-sync bash y
                   ;;
                 "Logs Dbsync")
-                  # Logic for Enter Dbsync
-                  container_id=$(podman ps -qf "name=${PROJ_NAME}-cardano-db-sync")
-                  if [ -z "$container_id" ]; then
-                    echo "No running Dbsync container found."
-                    read -r -p "Press enter to continue"
-                  else
-                    # Logs
-                    podman logs "$container_id" | more
-                    read -r -p "End of logs reached, press enter to continue"
-                  fi
-                  show_splash_screen
+                  show_logs cardano-db-sync y
                   ;;
                 "Logs PostgREST")
-                  # Logic for Enter PostgREST
-                  container_id=$(podman ps -qf "name=${PROJ_NAME}-postgrest")
-                  if [ -z "$container_id" ]; then
-                    echo "No running PostgREST container found."
-                    read -r -p "Press enter to continue"
-                  else
-                    # Logs
-                    podman logs "$container_id" | more
-                    read -r -p "End of logs reached, press enter to continue"
-                  fi
-                  show_splash_screen
+                  show_logs postgrest y
                   ;;
                 "Enter HAProxy")
-                  # Logic for Enter HAProxy
-                  container_id=$(podman ps -qf "name=${PROJ_NAME}-haproxy")
-                  if [ -z "$container_id" ]; then
-                    echo "No running HAProxy container found."
-                    read -r -p "Press enter to continue"
-                  else
-                    # Executing commands in the found container
-                    podman exec -it "$container_id" bash -c "bash"
-                  fi
-                  show_splash_screen
+                  execute_in_container haproxy bash y
                   ;;
                 "Logs HAProxy")
-                  # Logic for Enter HAProxy
-                  container_id=$(podman ps -qf "name=${PROJ_NAME}-haproxy")
-                  if [ -z "$container_id" ]; then
-                    echo "No running HAProxy container found."
-                    read -r -p "Press enter to continue"
-                  else
-                    # Logs
-                    podman logs "$container_id" | more
-                    read -r -p "End of logs reached, press enter to continue"
-                  fi
-                  show_splash_screen
+                  show_logs haproxy y
                   ;;
               esac
+              show_splash_screen
               ;;
             "Exit")
               clear
@@ -636,38 +557,34 @@ process_args() {
       podman compose -f "${KLITE_HOME}"/podman-compose.yml down
       ;;
     --enter-node)
-      container_id=$(podman ps -qf "name=cardano-node")
-      [ -z "$container_id" ] && echo "No running Node container found." || podman exec -it "$container_id" bash
+      execute_in_container cardano-node bash
       ;;
     --logs-node)
-      container_id=$(podman ps -qf "name=cardano-node")
-      [ -z "$container_id" ] && echo "No running Node container found." || podman logs "$container_id" | more
+      show_logs cardano-node
       ;;
     --gliveview)
-      container_id=$(podman ps -qf "name=cardano-node")
-      [ -z "$container_id" ] && echo "No running Node container found." || podman exec -it "$container_id" /opt/cardano/cnode/scripts/gLiveView.sh
+      execute_in_container cardano-node /opt/cardano/cnode/scripts/gLiveView.sh
       ;;
     --cntools)
-      container_id=$(podman ps -qf "name=cardano-node")
-      [ -z "$container_id" ] && echo "No running Node container found." || podman exec -it "$container_id" /opt/cardano/cnode/scripts/cntools.sh
+      execute_in_container cardano-node /opt/cardano/cnode/scripts/cntools.sh
       ;;
     --enter-postgres)
-      execute_in_container "postgress" "bash"
+      execute_in_container postgress bash
       ;;
     --logs-postgres)
-      show_logs "postgress"
+      show_logs postgress
       ;;
     --enter-dbsync)
-      execute_in_container "${PROJ_NAME}-cardano-db-sync" "bash"
+      execute_in_container cardano-db-sync bash
       ;;
     --logs-dbsync)
-      show_logs "${PROJ_NAME}-cardano-db-sync"
+      show_logs cardano-db-sync
       ;;
     --enter-haproxy)
-      execute_in_container "${PROJ_NAME}-haproxy" "bash"
+      execute_in_container haproxy bash
       ;;
     --logs-haproxy)
-      show_logs "${PROJ_NAME}-haproxy"
+      show_logs haproxy
       ;;
     --help|-h)
       display_help_usage
@@ -689,9 +606,11 @@ process_args() {
 execute_in_container() {
   local container_name=$1
   local command=$2
+  local interactive=$3
   local container_id;container_id=$(podman ps -qf "name=${container_name}")
   if [ -z "$container_id" ]; then
     echo "No running ${container_name} container found."
+    [ "${interactive}" == "y" ] && read -r -p "Press enter to continue"
   else
     podman exec -it "${container_id}" "${command}"
   fi
@@ -699,11 +618,14 @@ execute_in_container() {
 
 show_logs() {
   local container_name=$1
+  local interactive=$2
   local container_id;container_id=$(podman ps -qf "name=${container_name}")
   if [ -z "${container_id}" ]; then
     echo "No running ${container_name} container found."
+    [ "${interactive}" == "y" ] && read -r -p "Press enter to continue"
   else
-    podman logs "$container_id" | more
+    podman logs "$container_id" 2>&1 | more
+    read -r -p "End of logs reached, press enter to continue"
   fi
 }
 

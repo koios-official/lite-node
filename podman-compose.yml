@@ -2,7 +2,7 @@ version: '3.9'
 
 services:
   cardano-node:
-    image: ghcr.io/cardano-community/cardano-node:10.1.4
+    image: ghcr.io/cardano-community/cardano-node:10.4.1
     init: true
     hostname: cardano-node
     environment:
@@ -55,7 +55,7 @@ services:
         max-file: "10"
 
   cardano-db-sync:
-    image: ghcr.io/intersectmbo/cardano-db-sync:13.6.0.4
+    image: ghcr.io/intersectmbo/cardano-db-sync:13.6.0.5
     hostname: cardano-db-sync
     environment:
       NETWORK: ${NETWORK:-mainnet}

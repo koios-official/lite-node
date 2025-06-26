@@ -3,7 +3,6 @@
 CURRTIME=$(date +%s)
 echo "Starting postgres-init script at `date`"
 
-
 CTRL_TABLE_EXISTS=`psql -Aqt -c "select exists(select 1 from information_schema.tables where table_name = 'control_table')"`
 
 if [[ "${CTRL_TABLE_EXISTS}" == "f" ]]; then
