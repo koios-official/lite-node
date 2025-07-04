@@ -4,7 +4,9 @@
 
 VERSION=0.0.1
 PODMAN_VERSION=5.5.2
+PODMAN_COMPOSE_VERSION=1.4.1
 NAME="admin tool"
+
 # Get the full path of the current script's directory
 script_dir=$(dirname "$(realpath "${BASH_SOURCE[@]}")")
 # Remove the last folder from the path and rename it to KLITE_HOME
@@ -175,13 +177,17 @@ podman_install() {
           # Add Podman's official GPG key:
           sudo rm -rf ~/.local/share/containers
           sudo apt-get install -y ca-certificates curl gpg
-          sudo apt-get remove -y podman podman-compose python3-podman-compose
+          sudo apt-get remove -y podman podman-compose python3-podman-compose docker-* containerd
           [ -f /etc/apt/sources.list.d/home:alvistack.list ] && sudo rm -rf /etc/apt/sources.list.d/home:alvistack.list
           echo 'deb http://download.opensuse.org/repositories/home:/alvistack/Debian_12/ /' | sudo tee /etc/apt/sources.list.d/home:alvistack.list > /dev/null
           curl -fsSL https://download.opensuse.org/repositories/home:alvistack/Debian_12/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/home_alvistack.gpg > /dev/null
           gum spin --spinner dot --title "Updating..." -- sudo apt-get update
           gum spin --spinner dot --title "Installing Podman..." -- echo && \
-            sudo apt-get install -y podman python3-podman-compose netavark passt
+            sudo apt-get install -y python3 python3-pip netavark passt
+          mkdir "${HOME}"/tmp && cd "${HOME}"/tmp || exit
+          curl -sf https://github.com/containers/podman/releases/download/v${PODMAN_VERSION}/podman-remote-static-linux_amd64.tar.gz -o ./podman-${PODMAN_VERSION}.tar.gz
+          python3 -m pip install https://github.com/containers/podman-compose/archive/v${PODMAN_COMPOSE_VERSION}.tar.gz  --break-system-packages
+          tar zxf podman-${PODMAN_VERSION}.tar.gz --strip-components 2 bin/podman-remote-static-linux_amd64 && mv ./podman-remote-static-linux_amd64 "${HOME}"/.local/bin/podman
           ;;
         *)
           echo "Unsupported Linux distribution for automatic Podman installation."
