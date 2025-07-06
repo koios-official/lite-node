@@ -133,7 +133,7 @@ podman_status(){
 
   # Check for specific Podman containers
   node_container=$(check_container_status "cardano-node" "🧊 " "🔻 ")
-  postgres_container=$(check_container_status "postgress" "🔹 " "🔻 ")
+  postgres_container=$(check_container_status "postgres" "🔹 " "🔻 ")
   db_sync_container=$(check_container_status "cardano-db-sync" "🥽 " "🔻 ")
   postgrest_container=$(check_container_status "postgrest" "🪢 " "🔻 ")
   haproxy_container=$(check_container_status "haproxy" "🧢 " "🔻 ")
@@ -175,7 +175,7 @@ podman_install() {
           # Add Podman's official GPG key:
           sudo rm -rf ~/.local/share/containers
           sudo apt-get install -y ca-certificates curl gpg
-          sudo apt-get remove -y podman podman-compose python3-podman-compose
+          sudo apt-get remove -y podman python3-podman-compose
           [ -f /etc/apt/sources.list.d/home:alvistack.list ] && sudo rm -rf /etc/apt/sources.list.d/home:alvistack.list
           echo 'deb http://download.opensuse.org/repositories/home:/alvistack/Debian_12/ /' | sudo tee /etc/apt/sources.list.d/home:alvistack.list > /dev/null
           curl -fsSL https://download.opensuse.org/repositories/home:alvistack/Debian_12/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/home_alvistack.gpg > /dev/null
@@ -332,7 +332,7 @@ menu() {
                     ;;
                 "Enter PSQL")
                     # Logic for Enter Postgres
-                    container_id=$(podman ps -qf "name=postgress")
+                    container_id=$(podman ps -qf "name=postgres")
                     if [ -z "$container_id" ]; then
                         echo "No running PostgreSQL found."
                         read -r -p "Press enter to continue"
@@ -344,7 +344,7 @@ menu() {
                     ;;
                 "DBs Lists")
                     # Logic for Enter Postgres
-                    container_id=$(podman ps -qf "name=postgress")
+                    container_id=$(podman ps -qf "name=postgres")
                     if [ -z "$container_id" ]; then
                         echo "No running PostgreSQL found."
                         read -r -p "Press enter to continue"
@@ -365,7 +365,7 @@ menu() {
               case "$setup_choice" in
                 "Initialise Postgres")
                   # Logic for installing Postgres
-                  container_id=$(podman ps -qf "name=postgress")
+                  container_id=$(podman ps -qf "name=postgres")
                   if [ -z "$container_id" ]; then
                     echo "No running PostgreSQL container found."
                     read -r -p "Press enter to continue"
@@ -430,10 +430,10 @@ menu() {
                   show_logs cardano-node y
                   ;;
                 "Enter Postgres")
-                  execute_in_container postgress bash y
+                  execute_in_container postgres bash y
                   ;;
                 "Logs Postgres")
-                  show_logs postgress y
+                  show_logs postgres y
                   ;;
                 "Enter Dbsync")
                   execute_in_container cardano-db-sync bash y
@@ -569,10 +569,10 @@ process_args() {
       execute_in_container cardano-node /opt/cardano/cnode/scripts/cntools.sh
       ;;
     --enter-postgres)
-      execute_in_container postgress bash
+      execute_in_container postgres bash
       ;;
     --logs-postgres)
-      show_logs postgress
+      show_logs postgres
       ;;
     --enter-dbsync)
       execute_in_container cardano-db-sync bash
@@ -581,7 +581,7 @@ process_args() {
       show_logs cardano-db-sync
       ;;
     --enter-haproxy)
-      execute_in_container haproxy bash
+      execute_in_container haproxy sh
       ;;
     --logs-haproxy)
       show_logs haproxy

@@ -15,6 +15,13 @@ This setup includes several key components:
 
 Each service is containerized and managed via Podman, ensuring easy deployment and scalability.
 
+## db-sync snapshot restoration (recommended)
+
+To restore the db-sync database from a snapshot, either:
+  1) specify the URL as the `RESTORE_SNAPSHOT` variable in the `.env` file, e.g. `RESTORE_SNAPSHOT="https://share.koios.rest/api/public/dl/xFdZDfM4/dbsync/preprod-lite-epoch219-x86_64.tgz"`
+
+  2) download the snapshot file under `snapshots/` and specify the path as the `RESTORE_SNAPSHOT` variable in the `.env` file, e.g. `RESTORE_SNAPSHOT="snapshots/preprod-lite-epoch219-x86_64.tgz"`
+
 ## Local Testing
 
 For local testing:
@@ -76,4 +83,29 @@ Below are the available commands and their descriptions:
 --logs-dbsync: 			 Displays logs for the DBSync container.
 --enter-haproxy: 		 Accesses the HAProxy container.
 --logs-haproxy: 		 Displays logs for the HAProxy container.
+```
+
+
+
+# Ubuntu notes
+- need to install podman-compose but its not available on apt
+```
+sudo apt install python3-pip
+pip3 install podman-compose
+
+# export PATH="/home/node/.local/bin:$PATH"
+
+# for netavark, add to sources
+# deb http://cz.archive.ubuntu.com/ubuntu plucky main universe
+
+# To fix Error: command required for rootless mode with multiple IDs: exec: "newuidmap": executable file not found in $PATH
+
+sudo rm -rf ~/.local/share/containers
+sudo apt install podman uidmap slirp4netns
+
+
+# needed reboot as well for WARN[0000] The cgroupv2 manager is set to systemd but there is no systemd user session available
+# or systemctl --user start dbus
+
+
 ```
