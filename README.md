@@ -85,27 +85,3 @@ Below are the available commands and their descriptions:
 --logs-haproxy: 		 Displays logs for the HAProxy container.
 ```
 
-
-
-# Ubuntu notes
-- need to install podman-compose but its not available on apt
-```
-sudo apt install python3-pip
-pip3 install podman-compose
-
-# export PATH="/home/node/.local/bin:$PATH"
-
-# for netavark, add to sources
-# deb http://cz.archive.ubuntu.com/ubuntu plucky main universe
-
-# To fix Error: command required for rootless mode with multiple IDs: exec: "newuidmap": executable file not found in $PATH
-
-sudo rm -rf ~/.local/share/containers
-sudo apt install podman uidmap slirp4netns
-
-
-# needed reboot as well for WARN[0000] The cgroupv2 manager is set to systemd but there is no systemd user session available
-# or systemctl --user start dbus
-
-
-```
