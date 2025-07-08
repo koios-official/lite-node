@@ -67,7 +67,6 @@ services:
     hostname: cardano-db-sync
     environment:
       NETWORK: ${NETWORK:-mainnet}
-      PGPORT: ${POSTGRES_PORT}
       POSTGRES_HOST: postgres
       POSTGRES_PORT: ${POSTGRES_PORT}
       POSTGRES_DB: ${POSTGRES_DB}
