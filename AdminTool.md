@@ -84,14 +84,14 @@ Runs CNTools within the Cardano Node container.
 
 ### --enter-postgres
 ```bash
-container_id=$(docker ps -qf "name=postgress")
+container_id=$(docker ps -qf "name=postgres")
 [ -z "$container_id" ] && echo "No running Postgres container found." || docker exec -it "$container_id" bash
 ```
 Allows users to access the Postgres container for database management.
 
 ### --logs-postgres
 ```bash
-container_id=$(docker ps -qf "name=postgress")
+container_id=$(docker ps -qf "name=postgres")
 [ -z "$container_id" ] && echo "No running Postgres container found." || docker logs "$container_id" | more
 ```
 Shows the logs for the Postgres container.
