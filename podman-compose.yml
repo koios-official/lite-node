@@ -9,13 +9,13 @@ services:
       NETWORK: ${NETWORK}
       MITHRIL_DOWNLOAD: "Y"
       CNODE_PORT: ${CARDANO_NODE_PORT:-6000}
-      SOCKET: "${CNODE_HOME}/sockets/node.socket" 
+      SOCKET: "${CNODE_HOME}/sockets/node.socket"
       UPDATE_CHECK: "N"
     volumes:
       - node-db:/opt/cardano/cnode/db
       - node-ipc:/opt/cardano/cnode/sockets
       - node-cfg:/opt/cardano/cnode/files
-      - ./scripts/:/scripts/
+      - ./scripts/:/scripts/:O
     restart: on-failure
     healthcheck:
       test: ["CMD-SHELL", "/scripts/lib/node_healthcheck.sh"]
@@ -28,14 +28,14 @@ services:
         max-size: "200k"
         max-file: "10"
 
-  postgress:
+  postgres:
     image: docker.io/postgres:17.2-bookworm
-    hostname: postgress
+    hostname: postgres
     volumes:
       - postgresdb:/var/lib/postgresql/data
-      - ./scripts/:/scripts/
+      - ./scripts/:/scripts/:O
     ports:
-     - "${POSTGRES_PORT}:${POSTGRES_PORT}"
+      - "${POSTGRES_PORT}:${POSTGRES_PORT}"
     environment:
       PGPORT: ${POSTGRES_PORT}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -43,10 +43,18 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       RPC_SCHEMA: ${RPC_SCHEMA}
     healthcheck:
-      test:  ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 60s
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
       timeout: 5s
-    command: postgres -p ${POSTGRES_PORT} -c max_connections=200 -c maintenance_work_mem=2GB -c max_parallel_maintenance_workers=4 -c shared_buffers=6GB -c wal_level=minimal -c max_wal_senders=0 -c synchronous_commit=off
+    command: >
+      postgres -p ${POSTGRES_PORT}
+               -c max_connections=${PG_MAX_CONNECTIONS}
+               -c maintenance_work_mem=${PG_MAINTENANCE_WORK_MEM}
+               -c max_parallel_maintenance_workers=${PG_PARALLEL_MAINT_WORKERS}
+               -c shared_buffers=${PG_SHARED_BUFFERS}
+               -c wal_level=minimal
+               -c max_wal_senders=0
+               -c synchronous_commit=off
     restart: on-failure
     logging:
       driver: "json-file"
@@ -59,15 +67,13 @@ services:
     hostname: cardano-db-sync
     environment:
       NETWORK: ${NETWORK:-mainnet}
-      PGHOST: postgress
-      PGPORT: ${POSTGRES_PORT}
-      POSTGRES_HOST: postgress
+      POSTGRES_HOST: postgres
       POSTGRES_PORT: ${POSTGRES_PORT}
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       RESTORE_SNAPSHOT: ${RESTORE_SNAPSHOT:-}
-      RESTORE_RECREATE_DB: N
+      RESTORE_RECREATE_DB: "N"
       DB_SYNC_CONFIG: ${DB_SYNC_CONFIG}
     healthcheck:
       test: ["CMD-SHELL", "/scripts/lib/dbsync_healthcheck.sh"]
@@ -76,14 +82,15 @@ services:
     depends_on:
       cardano-node:
         condition: service_healthy
-      postgress:
+      postgres:
         condition: service_healthy
     volumes:
       - db-sync-data:/var/lib/cexplorer
       - node-ipc:/node-ipc
       - node-cfg:/opt/cardano/cnode/files
-      - ./configs/dbsync:/dbsync-cfg
-      - ./scripts/:/scripts/
+      - ./configs/dbsync:/dbsync-cfg:O
+      - ./scripts/:/scripts/:O
+      - ./snapshots/:/snapshots:O
     restart: on-failure
     logging:
       driver: "json-file"
@@ -94,21 +101,21 @@ services:
   cron:
     build: .
     depends_on:
-      postgress:
+      postgres:
         condition: service_healthy
       cardano-db-sync:
         condition: service_healthy
     environment:
       NETWORK: ${NETWORK:-mainnet}
-      PGHOST: postgress
+      PGHOST: postgres
       PGPORT: ${POSTGRES_PORT}
       PGDATABASE: ${POSTGRES_DB}
       PGUSER: ${POSTGRES_USER}
       PGPASSWORD: ${POSTGRES_PASSWORD}
       RPC_SCHEMA: ${RPC_SCHEMA}
     volumes:
-      - ./scripts/cron:/etc/cron.d/
-      - ./scripts:/scripts
+      - ./scripts/cron:/etc/cron.d/:O
+      - ./scripts:/scripts:O
     # Uncomment for persistent logs
     # - ./logs:/var/log
     restart: unless-stopped
@@ -117,16 +124,16 @@ services:
     image: docker.io/postgrest/postgrest:latest
     hostname: postgrest
     depends_on:
-      postgress:
+      postgres:
         condition: service_healthy
       cardano-db-sync:
         condition: service_healthy
     ports:
-      - ${POSTGREST_PORT}:${POSTGREST_PORT}
+      - "${POSTGREST_PORT}:${POSTGREST_PORT}"
     volumes:
-      - ./scripts/:/scripts/
+      - ./scripts/:/scripts/:O
     environment:
-      PGRST_DB_URI: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgress:${POSTGRES_PORT}/${POSTGRES_DB}
+      PGRST_DB_URI: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:${POSTGRES_PORT}/${POSTGRES_DB}
       PGRST_DB_ANON_ROLE: ${PGRST_DB_ANON_ROLE}
       PGRST_DB_SCHEMA: ${RPC_SCHEMA}
       PGRST_SERVER_PORT: ${POSTGREST_PORT}
@@ -147,13 +154,22 @@ services:
       cardano-db-sync:
         condition: service_healthy
     volumes:
-      - ./configs/haproxy/:/usr/local/etc/haproxy/
-      - ./scripts/:/scripts/
+      - ./configs/haproxy/:/usr/local/etc/haproxy/:O
+      - ./scripts/:/scripts/:O
+    entrypoint: >
+      sh -c '
+        cp /usr/local/etc/haproxy/haproxy.cfg.tmpl /tmp/haproxy.cfg
+
+        sed -i -e "s/__HAPROXY_PORT__/${HAPROXY_PORT}/g" \
+              -e "s/__POSTGREST_PORT__/${POSTGREST_PORT}/g" /tmp/haproxy.cfg
+
+        exec haproxy -W -db -f /tmp/haproxy.cfg
+      '
     ports:
-      - 8153:8153
+      - "${HAPROXY_PORT}:${HAPROXY_PORT}"
     healthcheck:
-      test: ["CMD-SHELL", "haproxy -c -- /usr/local/etc/haproxy/haproxy.cfg"]
-      interval: 10s
+      test: ["CMD-SHELL", "haproxy -c -f /tmp/haproxy.cfg"]
+      interval: 10s 
       timeout: 5s
       retries: 5
     restart: on-failure

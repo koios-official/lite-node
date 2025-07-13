@@ -15,6 +15,13 @@ This setup includes several key components:
 
 Each service is containerized and managed via Podman, ensuring easy deployment and scalability.
 
+## db-sync snapshot restoration (recommended)
+
+To restore the db-sync database from a snapshot, either:
+  1) specify the URL as the `RESTORE_SNAPSHOT` variable in the `.env` file, e.g. `RESTORE_SNAPSHOT="https://share.koios.rest/api/public/dl/xFdZDfM4/dbsync/preprod-lite-latest.tgz"`
+
+  2) download the snapshot file under `snapshots/` and specify the path as the `RESTORE_SNAPSHOT` variable in the `.env` file, e.g. `RESTORE_SNAPSHOT="snapshots/preprod-lite-latest.tgz"`
+
 ## Local Testing
 
 For local testing:
@@ -77,3 +84,4 @@ Below are the available commands and their descriptions:
 --enter-haproxy: 		 Accesses the HAProxy container.
 --logs-haproxy: 		 Displays logs for the HAProxy container.
 ```
+

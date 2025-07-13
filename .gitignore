@@ -4,3 +4,4 @@
 *.swp
 scripts/sql/rpc/*.txt
 configs/dbsync/*.json
+snapshots/
