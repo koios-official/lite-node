@@ -18,9 +18,9 @@ Each service is containerized and managed via Podman, ensuring easy deployment a
 ## db-sync snapshot restoration (recommended)
 
 To restore the db-sync database from a snapshot, either:
-  1) specify the URL as the `RESTORE_SNAPSHOT` variable in the `.env` file, e.g. `RESTORE_SNAPSHOT="https://share.koios.rest/api/public/dl/xFdZDfM4/dbsync/preprod-lite-epoch219-x86_64.tgz"`
+  1) specify the URL as the `RESTORE_SNAPSHOT` variable in the `.env` file, e.g. `RESTORE_SNAPSHOT="https://share.koios.rest/api/public/dl/xFdZDfM4/dbsync/preprod-lite-latest.tgz"`
 
-  2) download the snapshot file under `snapshots/` and specify the path as the `RESTORE_SNAPSHOT` variable in the `.env` file, e.g. `RESTORE_SNAPSHOT="snapshots/preprod-lite-epoch219-x86_64.tgz"`
+  2) download the snapshot file under `snapshots/` and specify the path as the `RESTORE_SNAPSHOT` variable in the `.env` file, e.g. `RESTORE_SNAPSHOT="snapshots/preprod-lite-latest.tgz"`
 
 ## Local Testing
 
