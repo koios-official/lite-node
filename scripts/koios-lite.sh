@@ -13,6 +13,10 @@ script_dir=$(dirname "$(realpath "${BASH_SOURCE[@]}")")
 KLITE_HOME=$(dirname "$script_dir")
 path_line="export PATH=\"$script_dir:\$PATH\""
 
+source /etc/os-release
+OS_ID="${ID}"
+[[ -z "${OS_ID}" ]] && OS_ID="${ID_LIKE}"
+
 export PODMAN_COMPOSE_WARNING_LOGS=false
 
 # Append path_line to shell configuration files
@@ -31,8 +35,7 @@ install_dependencies() {
   os_name="$(uname -s)"
   case "${os_name}" in
     Linux*)
-      source /etc/os-release
-      case "${ID_LIKE}" in
+      case "${OS_ID}" in
         ubuntu|debian)
           if ! sudo apt-get update && sudo apt-get install -y gpg curl gawk; then return 1; fi
           if ! sudo mkdir -p /etc/apt/keyrings; then return 1; fi
@@ -171,9 +174,8 @@ podman_install() {
   os_name="$(uname -s)"
   case "${os_name}" in
     Linux*)
-      source /etc/os-release
-      case "${ID_LIKE}" in
-        debian)
+      case "${OS_ID}" in
+        ubuntu|debian)
           # Add Podman's official GPG key:
           sudo rm -rf ~/.local/share/containers
           sudo apt-get install -y ca-certificates curl gpg
